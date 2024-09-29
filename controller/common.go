@@ -2,9 +2,16 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"songs-treasure/pkg/logging"
 )
+
+type PaginationRequest struct {
+	PageSize uint `json:"page_size"`
+	Page     uint `json:"page"`
+}
 
 func Response(data interface{}, err error, w http.ResponseWriter, status int) {
 	w.Header().Set("Content-Type", "application/json")
@@ -16,6 +23,7 @@ func Response(data interface{}, err error, w http.ResponseWriter, status int) {
 		}
 		w.WriteHeader(status)
 	} else {
+		logging.Default.Info(fmt.Sprintf("%+v", data))
 		w.WriteHeader(http.StatusOK)
 	}
 
@@ -23,13 +31,18 @@ func Response(data interface{}, err error, w http.ResponseWriter, status int) {
 }
 
 func readParameters[Request any](r *http.Request) (request Request, err error) {
+	defer func() {
+		if err != nil {
+			logging.Default.Error(err.Error())
+		} else {
+			logging.Default.Info(fmt.Sprintf("%+v", request))
+		}
+	}()
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return
 	}
 	err = json.Unmarshal(body, &request)
-	// if err != nil {
-	// 	return
-	// }
+
 	return
 }

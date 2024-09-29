@@ -2,37 +2,68 @@ package db
 
 import (
 	"fmt"
+	"songs-treasure/pkg/db/model"
 	"songs-treasure/pkg/logging"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-type postgres struct {
+type pg struct {
 	*gorm.DB
 }
 
-func DbConnect(dbhost, dbport, dbuser, dbpass, dbname string) (pgdb *postgres, err error) {
+type DBParams struct {
+	DBHost string
+	DBPort string
+	DBUser string
+	DBPass string
+	DBName string
+}
+
+func DbConnect(dbparams DBParams) (pgdb *pg, err error) {
 	var connData string = fmt.Sprintf(
-		"host='%s' port='%s' user='%s' password='%s' dbname='%s' sslmode='disable'",
-		dbhost, dbport, dbuser, dbpass, dbname,
+		"host=%v user=%v password=%v dbname=%v port=%v sslmode=disable",
+		dbparams.DBHost, dbparams.DBUser, dbparams.DBPass, dbparams.DBName, dbparams.DBPort,
 	)
 	logging.Default.Debugf(connData)
-	db, err := gorm.Open("postgres", connData)
+
+	db, err := gorm.Open(postgres.Open(connData), &gorm.Config{})
 	if err != nil {
-		fmt.Println("error")
 		logging.Default.Errorf("DB connection error: %v", err)
 		return
 	}
 
-	pgdb = &postgres{db}
-	logging.Default.Info("Connected to DB")
+	pgdb = &pg{db}
+	logging.Default.Info("Connected to DB and generated missing structs")
 
 	return
 }
 
-func DbMigrate(DB *postgres) {
-	DB.AutoMigrate()
+func DbMigrate(db *pg) (err error) {
+	migration := db.Migrator()
+
+	logging.Default.Debugf("db: has groups - %v, has songs - %v, has songs_verses - %v",
+		migration.HasTable("groups"), migration.HasTable("songs"), migration.HasTable("songs_verses"))
+
+	if migration.HasTable("groups") &&
+		migration.HasTable("songs") &&
+		migration.HasTable("songs_verses") {
+		logging.Default.Infof("No need to migrate")
+		return
+	}
+
+	err = db.AutoMigrate(
+		&model.Group{},
+		&model.Song{},
+		&model.SongsVerse{},
+	)
+	if err != nil {
+		logging.Default.Errorf("DB migration error: %v", err)
+		return
+	}
 
 	logging.Default.Info("AutoMigration completed")
+
+	return
 }

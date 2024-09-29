@@ -1,20 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
-	"songs-treasure/controller"
 	"songs-treasure/internal/config"
-	"songs-treasure/internal/service"
 	"songs-treasure/pkg/db"
 	"songs-treasure/pkg/logging"
-	"songs-treasure/router"
+
+	"gorm.io/gen"
 )
 
 func main() {
 	var err error
-	fmt.Println("Hello there!")
 
 	err = config.LoadConfig()
 	if err != nil {
@@ -34,15 +30,16 @@ func main() {
 		logging.Default.Fatalf("Couldn`t connect to DB")
 	}
 
-	err = db.DbMigrate(DB)
+	g := gen.NewGenerator(gen.Config{
+		OutPath: "./pkg/db/tables_functions",
+		Mode:    gen.WithoutContext | gen.WithDefaultQuery | gen.WithQueryInterface,
+	})
 
-	if err != nil {
-		logging.Default.Fatalf("Couldn`t complete DB migration")
-	}
+	g.UseDB(DB.DB)
+	g.ApplyBasic(
+		g.GenerateAllTable()...,
+	)
+	g.Execute()
 
-	service := service.NewService(DB)
-	controller := controller.NewController(service)
-
-	logging.Default.Infof("Starting server. Port:%s", config.PORT)
-	logging.Default.Error(http.ListenAndServe(fmt.Sprintf(":%s", config.PORT), router.Router(controller)).Error())
+	logging.Default.Info("Generated tables from DB")
 }
