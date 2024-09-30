@@ -14,11 +14,11 @@ func Router(controller controller.Controller) http.Handler {
 	router.HandleFunc("/getGroup/{id}", controller.GetGroup).Methods("GET")
 	router.HandleFunc("/getGroups", controller.GetGroups).Methods("GET")
 
+	router.HandleFunc("/addSong", controller.AddSong).Methods("POST")
 	router.HandleFunc("/getSong/{id}", controller.GetSong).Methods("GET")
 	router.HandleFunc("/getSongs", controller.GetSongs).Methods("GET")
-	router.HandleFunc("/getSongs/{id}", controller.GetSong).Methods("GET")
-	router.HandleFunc("/addSong", controller.AddSong).Methods("POST")
-	router.HandleFunc("/editSong", controller.EditSong).Methods("PUT")
+	router.HandleFunc("/getSongs/{id}", controller.GetSongsByGroupId).Methods("GET")
+	router.HandleFunc("/editSong", controller.EditSong).Methods("PATCH")
 	router.HandleFunc("/deleteSong", controller.DeleteSong).Methods("DELETE")
 
 	router.HandleFunc("/getVerses", controller.GetVerses).Methods("GET")

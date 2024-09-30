@@ -28,11 +28,14 @@ type GetSongsByGroupIdRequest struct {
 	PaginationRequest
 }
 type EditSongRequest struct {
-	Id      string `json:"id"`
-	Group   string `json:"group"`
+	Id      int    `json:"id"`
+	GroupId int    `json:"group_id"`
 	Song    string `json:"song"`
 	Link    string `json:"link"`
 	Release string `json:"release_date"`
+}
+type DeleteSongRequest struct {
+	Id int `json:"id"`
 }
 
 func (ctrl *controller) AddSong(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +126,7 @@ func (ctrl *controller) EditSong(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data, err := ctrl.service.EditSong(params.Id,
-		params.Group, params.Song, params.Release, params.Link)
+		params.GroupId, params.Song, params.Release, params.Link)
 	if err != nil {
 		Response(nil, err, w, http.StatusInternalServerError)
 		return
@@ -133,14 +136,15 @@ func (ctrl *controller) EditSong(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ctrl *controller) DeleteSong(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
-	logging.Default.Infof("DeleteSongById - %s", id)
-	if id == "" {
-		Response(nil, errors.New("Couldn`t get request id"), w, http.StatusBadRequest)
+	logging.Default.Info("DeleteSong")
+
+	params, err := readParameters[DeleteSongRequest](r)
+	if err != nil {
+		Response(nil, err, w, http.StatusBadRequest)
 		return
 	}
 
-	err := ctrl.service.DeleteSong(id)
+	err = ctrl.service.DeleteSong(params.Id)
 	if err != nil {
 		Response(nil, err, w, http.StatusInternalServerError)
 		return

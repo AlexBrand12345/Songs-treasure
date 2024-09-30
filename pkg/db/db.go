@@ -10,8 +10,8 @@ type DB interface {
 	GetSong(id string) (songInfo *SongInfo, err error)
 	GetSongs(group, song, from, to, link string, page, pageSize uint) (songs []*SongInfo, currentPage, pages int64, err error)
 	GetSongsByGroupId(id, song, from, to, link string, page, pageSize uint) (songs []*SongInfo, currentPage, pages int64, err error)
-	EditSong(id, group, song, release, link string) (songInfo *SongInfo, err error)
-	DeleteSong(id string) (err error)
+	EditSong(id, groupId int, song, release, link string) (songInfo *SongInfo, err error)
+	DeleteSong(id int) (err error)
 
 	GetVerses(text string, page, pageSize uint) (songs []*Song, currentPage, pages int64, err error)
 	GetVersesBySongId(id string, page, pageSize uint) (songWithVerses *SongWithVerses, currentPage, pages int64, err error)

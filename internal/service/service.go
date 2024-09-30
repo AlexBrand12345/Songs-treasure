@@ -12,8 +12,8 @@ type Service interface {
 	GetSong(id string) (resp GetSongResponse, err error) // by id
 	GetSongs(group, song, from, to, link string, page, pageSize uint) (resp GetSongsResponse, err error)
 	GetSongsByGroupId(id, song, from, to, link string, page, pageSize uint) (resp GetSongsByGroupIdResponse, err error) // by group id
-	EditSong(id, group, song, release, link string) (resp EditSongResponse, err error)
-	DeleteSong(id string) (err error)
+	EditSong(id, groupId int, song, release, link string) (resp EditSongResponse, err error)
+	DeleteSong(id int) (err error)
 
 	GetVerses(text string, page, pageSize uint) (resp GetVersesResponse, err error)
 	GetVersesBySongId(id string, page, pageSize uint) (resp GetVersesByIdResponse, err error)

@@ -125,8 +125,8 @@ func (srv *service) GetSongsByGroupId(groupId,
 	return
 }
 
-func (srv *service) EditSong(id, group, song, release, link string) (resp EditSongResponse, err error) {
-	songInfo, err := srv.db.EditSong(id, group, song, release, link)
+func (srv *service) EditSong(id, groupId int, song, release, link string) (resp EditSongResponse, err error) {
+	songInfo, err := srv.db.EditSong(id, groupId, song, release, link)
 	if err != nil {
 		logging.Default.Errorf("Couldn`t edit song, info: %v", err)
 		return
@@ -147,7 +147,7 @@ func (srv *service) EditSong(id, group, song, release, link string) (resp EditSo
 	return
 }
 
-func (srv *service) DeleteSong(id string) (err error) {
+func (srv *service) DeleteSong(id int) (err error) {
 	err = srv.db.DeleteSong(id)
 	if err != nil {
 		logging.Default.Errorf("Couldn`t delete song, info: %v", err)

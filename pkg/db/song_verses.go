@@ -7,6 +7,8 @@ import (
 	"songs-treasure/pkg/db/model"
 	"songs-treasure/pkg/logging"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 // select verses, tsv, rank
@@ -29,48 +31,52 @@ type SongWithVerses struct {
 }
 
 func (db *pg) GetVerses(text string, page, pageSize uint) (songs []*Song, currentPage, pages int64, err error) {
-	songsQuery := db.Model(&model.SongsVerse{}).
-		Select("songs_verses.song_id, songs.song_name, songs_verses.verses").
-		Joins("JOIN songs ON songs.id = songs_verses.song_id")
+	err = db.Transaction(func(tx *gorm.DB) (err error) {
+		songsQuery := db.Model(&model.SongsVerse{}).
+			Select("songs_verses.song_id, songs.song_name, songs_verses.verses").
+			Joins("JOIN songs ON songs.id = songs_verses.song_id")
 
-	if text != "" {
-		re := regexp.MustCompile(`\s+`)
-		text = re.ReplaceAllString(text, " ")
+		if text != "" {
+			re := regexp.MustCompile(`\s+`)
+			text = re.ReplaceAllString(text, " ")
 
-		query := fmt.Sprintf("to_tsquery('simple', '%s')", strings.Trim(strings.ReplaceAll(text, " ", "|"), "|"))
-		songsQuery = songsQuery.
-			Where("songs_verses.verses ILIKE ?", "%"+text+"%").
-			Or(fmt.Sprintf("songs_verses.tsv @@ %s", query)).
-			Order(fmt.Sprintf("songs_verses.verses ILIKE '%s' DESC, ts_rank(songs_verses.tsv, %s) DESC", "%"+text+"%", query))
-	}
-
-	var rowsCount int64
-	err = songsQuery.Count(&rowsCount).Error
-	if err != nil {
-		logging.Default.Warn(err.Error())
-		return
-	}
-
-	if page > 0 && pageSize > 0 {
-		pages = int64(math.Ceil(float64(rowsCount) / float64(pageSize)))
-		if int64(page) > pages {
-			currentPage = pages
-		} else {
-			currentPage = int64(page)
+			query := fmt.Sprintf("to_tsquery('simple', '%s')", strings.Trim(strings.ReplaceAll(text, " ", "|"), "|"))
+			songsQuery = songsQuery.
+				Where("songs_verses.verses ILIKE ?", "%"+text+"%").
+				Or(fmt.Sprintf("songs_verses.tsv @@ %s", query)).
+				Order(fmt.Sprintf("songs_verses.verses ILIKE '%s' DESC, ts_rank(songs_verses.tsv, %s) DESC", "%"+text+"%", query))
 		}
 
-		offset := (currentPage - 1) * int64(pageSize)
-		songsQuery = songsQuery.Offset(int(offset)).Limit(int(pageSize))
-	} else {
-		pages = 1
-		currentPage = 1
-	}
+		var rowsCount int64
+		err = songsQuery.Count(&rowsCount).Error
+		if err != nil {
+			logging.Default.Warn(err.Error())
+			return
+		}
 
-	err = songsQuery.Find(&songs).Error
-	if err != nil {
-		logging.Default.Warn(err.Error())
+		if page > 0 && pageSize > 0 {
+			pages = int64(math.Ceil(float64(rowsCount) / float64(pageSize)))
+			if int64(page) > pages {
+				currentPage = pages
+			} else {
+				currentPage = int64(page)
+			}
+
+			offset := (currentPage - 1) * int64(pageSize)
+			songsQuery = songsQuery.Offset(int(offset)).Limit(int(pageSize))
+		} else {
+			pages = 1
+			currentPage = 1
+		}
+
+		err = songsQuery.Find(&songs).Error
+		if err != nil {
+			logging.Default.Warn(err.Error())
+			return
+		}
+
 		return
-	}
+	})
 
 	return
 }
@@ -80,8 +86,7 @@ func (db *pg) GetVersesBySongId(id string, page, pageSize uint) (songWithVerses 
 	songsQuery := db.Model(&model.SongsVerse{}).
 		Select("songs_verses.song_id, songs.song_name, songs_verses.verses").
 		Joins("JOIN songs ON songs.id = songs_verses.song_id").
-		Where("songs_verses.song_id = ?", id).
-		Limit(1)
+		Where("songs_verses.song_id = ?", id)
 
 	err = songsQuery.First(&song).Error
 	if err != nil {
@@ -116,52 +121,55 @@ func (db *pg) GetVersesBySongId(id string, page, pageSize uint) (songWithVerses 
 }
 
 func (db *pg) EditVerses(id int, text string, versePosition uint) (changedSong *Song, err error) {
-	var song *Song
-	songsQuery := db.Model(&model.SongsVerse{}).
-		Select("songs_verses.song_id, songs.song_name, songs_verses.verses").
-		Joins("JOIN songs ON songs.id = songs_verses.song_id").
-		Where("songs_verses.song_id = ?", id).
-		Limit(1)
+	err = db.Transaction(func(tx *gorm.DB) (err error) {
+		var song *Song
+		songsQuery := db.Model(&model.SongsVerse{}).
+			Select("songs_verses.song_id, songs.song_name, songs_verses.verses").
+			Joins("JOIN songs ON songs.id = songs_verses.song_id").
+			Where("songs_verses.song_id = ?", id)
 
-	err = songsQuery.First(&song).Error
-	if err != nil {
-		logging.Default.Warn(err.Error())
+		err = songsQuery.First(&song).Error
+		if err != nil {
+			logging.Default.Warn(err.Error())
+			return
+		}
+
+		songVerses := strings.Split(strings.Trim(song.Verses, "\n\n"), "\n\n")
+
+		changedText := strings.Split(strings.Trim(text, "\n\n"), "\n\n")
+		if changedText[0] == "" {
+			err = fmt.Errorf("Song`s verse(s) can`t be deleted")
+			logging.Default.Error(err)
+
+			return
+		}
+
+		if versePosition == 0 {
+			songVerses = changedText
+		} else {
+			changedVerse := int(math.Min(
+				math.Max(float64(1), float64(versePosition)),
+				float64(len(songVerses)),
+			))
+
+			songVerses[changedVerse-1] = changedText[0]
+		}
+
+		changedSong = &Song{
+			SongID: song.SongID,
+			Name:   song.Name,
+			Verses: strings.Join(songVerses, "\n\n"),
+		}
+		err = db.Model(&model.SongsVerse{}).
+			Where("song_id = ?", song.SongID).
+			Update("verses", strings.Join(songVerses, "\n\n")).Error
+		if err != nil {
+			logging.Default.Warn(err.Error())
+			return
+		}
+
 		return
-	}
-
-	songVerses := strings.Split(strings.Trim(song.Verses, "\n\n"), "\n\n")
-
-	changedText := strings.Split(strings.Trim(text, "\n\n"), "\n\n")
-	if changedText[0] == "" {
-		err = fmt.Errorf("Song`s verse(s) can`t be deleted")
-		logging.Default.Error(err)
-
-		return
-	}
-
-	if versePosition == 0 {
-		songVerses = changedText
-	} else {
-		changedVerse := int(math.Min(
-			math.Max(float64(1), float64(versePosition)),
-			float64(len(songVerses)),
-		))
-
-		songVerses[changedVerse-1] = changedText[0]
-	}
-
-	changedSong = &Song{
-		SongID: song.SongID,
-		Name:   song.Name,
-		Verses: strings.Join(songVerses, "\n\n"),
-	}
-	err = db.Model(&model.SongsVerse{}).
-		Where("song_id = ?", song.SongID).
-		Update("verses", strings.Join(songVerses, "\n\n")).Error
-	if err != nil {
-		logging.Default.Warn(err.Error())
-		return
-	}
+	})
 
 	return
 }

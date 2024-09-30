@@ -15,10 +15,14 @@ type GetVersesRequest struct {
 type GetVersesByIdRequest struct {
 	PaginationRequest
 }
-type EditAllVersesRequest struct {
+type EditVersesRequest struct {
 	Id            int    `json:"id"`
 	Text          string `json:"text"`
 	VersePosition uint   `json:"verse_position"`
+}
+type EditAllVersesRequest struct {
+	Id   int    `json:"id"`
+	Text string `json:"text"`
 }
 
 func (ctrl *controller) GetVerses(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +68,7 @@ func (ctrl *controller) GetVersesBySongId(w http.ResponseWriter, r *http.Request
 func (ctrl *controller) EditVerse(w http.ResponseWriter, r *http.Request) {
 	logging.Default.Info("EditVerse")
 
-	params, err := readParameters[EditAllVersesRequest](r)
+	params, err := readParameters[EditVersesRequest](r)
 	if err != nil {
 		Response(nil, err, w, http.StatusBadRequest)
 		return
