@@ -1,0 +1,549 @@
+openapi: 3.0.0
+info:
+  title: Songs Treasure API
+  version: 1.0.0
+  description: API for managing songs and verses
+paths:
+  /getGroup/{id}:
+    get:
+      summary: Get a group by ID
+      description: Returns a group with specified ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            description: ID of the group to fetch
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetGroupResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /getGroups:
+    get:
+      summary: Get matching groups
+      description: Returns a list of groups by search string (group parameter)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetGroupsRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetGroupsResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /addSong:
+    post:
+      summary: Add a new song
+      description: Adds a new song to the database
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddSongRequest'
+      responses:
+        '201':
+          description: Song created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddSongResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /getSong/{id}:
+    get:
+      summary: Get a song by ID
+      description: Returns a song with specified ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            description: ID of the song to fetch
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSongResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /getSongs:
+    get:
+      summary: Get matching songs
+      description: Returns a list of songs by search fields
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetSongsRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSongsResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /getSongs/{id}:
+    get:
+      summary: Get songs by group ID and filters
+      description: Returns a list of songs belonging to a specific group and matching filters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            description: ID of the group to fetch songs from
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetSongsByGroupIdRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSongsByGroupIdResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /editSong:
+    patch:
+      summary: Edit an existing song
+      description: Edits an existing song, can`t update song if new group_id and song already exists 
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditSongRequest'
+      responses:
+        '200':
+          description: Song updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EditSongResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /deleteSong:
+    delete:
+      summary: Delete a song
+      description: Deletes a song
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteSongRequest'
+      responses:
+        '204':
+          description: Song deleted successfully
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /getVerses:
+    get:
+      summary: Get matching songs with verses
+      description: Returns a list of songs-verses by search text (text string)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetVersesRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetVersesResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /getVerses/{id}:
+    get:
+      summary: Get verses by song ID
+      description: Returns a list of verses belonging to a specific song
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            description: ID of the song to fetch verses from
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetVersesByIdRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetVersesByIdResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /editVerse:
+    patch:
+      summary: Edit an existing verse
+      description: Edits one verse in song - Позволяет поменять только один куплет, если куплет не указан, вернётся ошибка
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditVersesRequest'
+      responses:
+        '200':
+          description: Verse updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EditVersesResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /editAllVerses:
+    put:
+      summary: Edit song text
+      description: Edits entire song text - позволяет менять все куплеты сразу, создано отдельно для исключения ситуаци, когда был забыт указатель на номер куплета и песня превратилась в один куплет
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditAllVersesRequest'
+      responses:
+        '200':
+          description: Verses updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EditVersesResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+components:
+  schemas:
+    PaginationRequest:
+      type: object
+      properties:
+        page_size:
+          type: integer
+          format: int32
+          example: 4
+        page:
+          type: integer
+          format: int32
+          example: 2
+    GetGroupsRequest:
+      allOf:
+      - type: object
+        properties:
+          group:
+            type: string
+            description: group name
+            example: Twent
+      - $ref: '#/components/schemas/PaginationRequest'
+    GetVersesRequest:
+      allOf:
+      - type: object
+        properties:
+          text:
+            type: string
+            example: ome text I want to fi
+      - $ref: '#/components/schemas/PaginationRequest'
+    GetVersesByIdRequest:
+      $ref: '#/components/schemas/PaginationRequest'
+    EditVersesRequest:
+      type: object
+      required: 
+        - song_id
+        - verse_position
+      properties:
+        song_id:
+          type: integer
+          format: int64
+          example: 1
+          description: Это лишь ID песни, текст который изменится
+        text:
+          type: string
+          example: change second vers/nyeah yeah yeah
+          description: Это текст, который изменит 1 куплет прошлого текст 
+        verse_position:
+          type: integer
+          format: int32
+          example: 2
+          description: Это номер куплета, который изменится (от 1 до бесконечности(тогда изменится последний), а при 0 будет ошибка)
+    EditAllVersesRequest:
+      required: 
+        - song_id
+      type: object
+      properties:
+        song_id:
+          type: integer
+          format: int64
+          example: 1
+          description: Это лишь ID песни, текст который изменится
+        text:
+          type: string
+          example: I wanna edit/nall song/n/nI don`t care/nabou verses
+          description: Это текст, который изменит прошлый текст полностью
+    AddSongRequest:
+      required:
+        - group
+        - song
+      type: object
+      properties:
+        group:
+          type: string
+          description: Group name
+          example: Interesting group
+        song:
+          type: string
+          description: Song name
+          example: New song
+    GetSongsRequest:
+      allOf:
+      - type: object
+        properties:
+          group:
+            type: string
+            example: Twent one
+          song:
+            type: string
+            example: stressed ou
+          link:
+            type: string
+          from:
+            type: string
+            example: 01.01.2001
+          to:
+            type: string
+            example: 23.10.2024
+      - $ref: '#/components/schemas/PaginationRequest'
+    GetSongsByGroupIdRequest:
+      allOf:
+      - type: object
+        properties:
+          song:
+            type: string
+            example: stressed ou
+          link:
+            type: string
+          from:
+            type: string
+            example: 01.01.2001
+          to:
+            type: string
+            example: 23.10.2024
+      - $ref: '#/components/schemas/PaginationRequest'
+    EditSongRequest:
+      type: object
+      required: 
+        - id
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 23
+        group_id:
+          type: integer
+          format: int64
+          example: 3
+        song:
+          type: string
+          example: Full song name
+        link:
+          type: string
+          example: https://youtu.be/hl8MF-DqC6s?si=3yWnIdQwL_9WCA99
+        release_date:
+          type: string
+          example: 23.04.2018
+    DeleteSongRequest:
+      required: 
+        - id
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 15
+    PaginationResponse:
+      type: object
+      properties:
+        page_size:
+          type: integer
+          format: int32
+          example: 5
+        page:
+          type: integer
+          format: int32
+          example: 12
+        pages:
+          type: integer
+          format: int32
+          example: 13
+    GetGroupResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        group:
+          type: string
+          example: "Twenty One Pilots"
+    GetGroupsResponse:
+      allOf:
+      - type: object
+        properties:
+          groups:
+            type: array
+            items:
+              $ref: '#/components/schemas/GetGroupResponse'
+      - $ref: '#/components/schemas/PaginationResponse'
+    Verse:
+      type: object
+      properties:
+        song_id:
+          type: integer
+          format: int64
+          example: 4
+        name:
+          type: string
+          example: Song name
+        text:
+          type: string
+          example: Full text\nyou know it\\n\ndo I say\nit cool\n\nhuh?
+          description: На самом деле возвращаются n с одним обратным слэшем
+    GetVersesResponse:
+      allOf:
+      - type: object
+        properties:
+          search:
+            type: string
+            example: arching examp
+          verses:
+            type: array
+            items:
+              $ref: '#/components/schemas/Verse'
+      - $ref: '#/components/schemas/PaginationResponse'
+    GetVersesByIdResponse:
+      allOf:
+      - type: object
+        properties:
+          song_id:
+            type: integer
+            format: int64
+            example: 26
+          name:
+            type: string
+            example: Song name
+          verses:
+            type: array
+            items:
+              $ref: '#/components/schemas/Verse'
+      - $ref: '#/components/schemas/PaginationResponse'
+    EditVersesResponse:
+      type: object
+      properties:
+        song_id:
+          type: integer
+          format: int64
+          example: 43
+        name:
+          type: string
+          description: Название песни
+        text:
+          type: string
+          description: Новый текст песни, полностью
+    SongInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 22
+        group_id:
+          type: integer
+          format: int64
+          example: 4
+        group:
+          type: string
+          example: 4Group
+        song:
+          type: string
+          example: Old release
+        release_date:
+          type: string
+          example: 01.01.1920
+        link:
+          type: string
+    AddSongResponse:
+      $ref: '#/components/schemas/SongInfo'
+    GetSongResponse:
+      $ref: '#/components/schemas/SongInfo'
+    GetSongsResponse:
+      allOf:
+      - type: object
+        properties:
+          songs:
+            type: array
+            items:
+              $ref: '#/components/schemas/SongInfo'
+      - $ref: '#/components/schemas/PaginationResponse'
+    GetSongsByGroupIdResponse:
+      allOf:
+      - type: object
+        properties:
+          group_id:
+            type: integer
+            format: int64
+            example: 23
+          songs:
+            type: array
+            items:
+              $ref: '#/components/schemas/SongInfo'
+      - $ref: '#/components/schemas/PaginationResponse'
+    EditSongResponse: 
+      $ref: '#/components/schemas/SongInfo'
