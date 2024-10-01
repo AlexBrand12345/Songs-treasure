@@ -6,7 +6,7 @@ type DB interface {
 	GetGroup(id string) (group *model.Group, err error)
 	GetGroups(group string, page, pageSize uint) (groups []*model.Group, currentPage, pages int64, err error)
 
-	AddSong(group, song string) (songInfo *SongInfo, err error)
+	AddSong(group, song, text, releaseDate, link string) (songInfo *SongInfo, err error)
 	GetSong(id string) (songInfo *SongInfo, err error)
 	GetSongs(group, song, from, to, link string, page, pageSize uint) (songs []*SongInfo, currentPage, pages int64, err error)
 	GetSongsByGroupId(id, song, from, to, link string, page, pageSize uint) (songs []*SongInfo, currentPage, pages int64, err error)

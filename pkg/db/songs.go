@@ -5,6 +5,7 @@ import (
 	"math"
 	"songs-treasure/pkg/db/model"
 	"songs-treasure/pkg/logging"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -19,7 +20,71 @@ type SongInfo struct {
 	Link        string `gorm:"column:link"`
 }
 
-func (db *pg) AddSong(group, song string) (songInfo *SongInfo, err error) {
+func (db *pg) AddSong(group, song, text, releaseDate, link string) (songInfo *SongInfo, err error) {
+	err = db.Transaction(func(tx *gorm.DB) (err error) {
+		var currentGroup *model.Group
+		err = tx.First(&currentGroup, "group_name = ?", group).Error
+		if err != nil {
+			currentGroup = &model.Group{
+				GroupName: group,
+			}
+			err = tx.Create(&currentGroup).Error
+			if err != nil {
+				logging.Default.Error(err.Error())
+				return
+			}
+		} else {
+			logging.Default.Warnf("Group (%v) already exists", group)
+		}
+
+		var currentSongInfo *model.Song
+		err = tx.First(&currentSongInfo,
+			"group_id = ? AND song_name = ?",
+			currentGroup.ID, song).Error
+		if err == nil {
+			err = fmt.Errorf("This song was added before")
+			logging.Default.Warn(err.Error())
+			return
+		}
+		releaseTime, err := time.Parse("02.01.2006", releaseDate)
+		if err != nil {
+			logging.Default.Warn(err)
+			return
+		}
+		currentSongInfo = &model.Song{
+			GroupID:     currentGroup.ID,
+			SongName:    song,
+			ReleaseDate: releaseTime,
+			Link:        link,
+		}
+		err = tx.Create(&currentSongInfo).Error
+		if err != nil {
+			err = fmt.Errorf("Couldn`t add song to list")
+			logging.Default.Warn(err.Error())
+			return
+		}
+
+		err = tx.Exec(fmt.Sprintf("INSERT INTO songs_verses (song_id, verses) VALUES (%v, '%v')",
+			currentSongInfo.ID, strings.Trim(text, "\n\n"),
+		)).Error
+		if err != nil {
+			err = fmt.Errorf("Couldn`t add song text")
+			logging.Default.Warn(err.Error())
+			return
+		}
+
+		songInfo = &SongInfo{
+			Id:          int(currentSongInfo.ID),
+			GroupId:     int(currentSongInfo.GroupID),
+			Group:       currentGroup.GroupName,
+			Song:        currentSongInfo.SongName,
+			ReleaseDate: strings.Split(currentSongInfo.ReleaseDate.String(), " ")[0],
+			Link:        currentSongInfo.Link,
+		}
+
+		return
+	})
+
 	return
 }
 func (db *pg) GetSong(id string) (songInfo *SongInfo, err error) {
@@ -37,7 +102,7 @@ func (db *pg) GetSong(id string) (songInfo *SongInfo, err error) {
 }
 func (db *pg) GetSongs(group, song, from, to, link string, page, pageSize uint) (songs []*SongInfo, currentPage, pages int64, err error) {
 	err = db.Transaction(func(tx *gorm.DB) (err error) {
-		songsQuery := db.Model(&model.Song{}).
+		songsQuery := tx.Model(&model.Song{}).
 			Select("songs.id, songs.group_id, groups.group_name, songs.song_name, songs.release_date, songs.link").
 			Joins("JOIN groups ON songs.group_id = groups.id")
 
@@ -96,7 +161,7 @@ func (db *pg) GetSongs(group, song, from, to, link string, page, pageSize uint) 
 }
 func (db *pg) GetSongsByGroupId(id, song, from, to, link string, page, pageSize uint) (songs []*SongInfo, currentPage, pages int64, err error) {
 	err = db.Transaction(func(tx *gorm.DB) (err error) {
-		songsQuery := db.Model(&model.Song{}).
+		songsQuery := tx.Model(&model.Song{}).
 			Select("songs.id, songs.group_id, groups.group_name, songs.song_name, songs.release_date, songs.link").
 			Joins("JOIN groups ON songs.group_id = groups.id").
 			Where("songs.group_id = ?", id)
@@ -152,7 +217,7 @@ func (db *pg) GetSongsByGroupId(id, song, from, to, link string, page, pageSize 
 func (db *pg) EditSong(id, groupId int, song, release, link string) (songInfo *SongInfo, err error) {
 	err = db.Transaction(func(tx *gorm.DB) (err error) {
 		var currentSong *SongInfo
-		err = db.Model(&model.Song{}).
+		err = tx.Model(&model.Song{}).
 			Select("songs.id, songs.group_id, groups.group_name, songs.song_name, songs.release_date, songs.link").
 			Joins("JOIN groups ON songs.group_id = groups.id").
 			Where("songs.id = ?", id).
@@ -163,8 +228,9 @@ func (db *pg) EditSong(id, groupId int, song, release, link string) (songInfo *S
 		}
 
 		var newGroup *model.Group
+		var group = currentSong.Group
 		if groupId != 0 {
-			err = db.Model(&model.Group{}).
+			err = tx.Model(&model.Group{}).
 				Where("id = ?", groupId).
 				First(&newGroup).Error
 			if err != nil {
@@ -174,6 +240,7 @@ func (db *pg) EditSong(id, groupId int, song, release, link string) (songInfo *S
 			}
 
 			groupId = int(newGroup.ID)
+			group = newGroup.GroupName
 		} else {
 			groupId = currentSong.GroupId
 		}
@@ -181,29 +248,31 @@ func (db *pg) EditSong(id, groupId int, song, release, link string) (songInfo *S
 		if song == "" {
 			song = currentSong.Song
 		}
+
 		var equalSong *model.Song
-		resp := db.Model(&model.Song{}).
+		err = tx.Model(&model.Song{}).
+			Select("songs.group_id, songs.song_name").
 			Where("songs.group_id = ? AND songs.song_name = ?", groupId, song).
-			First(&equalSong)
-		err = resp.Error
-		if err != nil {
-			logging.Default.Warn(err.Error())
-			return
-		}
-		if resp.RowsAffected != 0 {
-			err = fmt.Errorf("Song with selected group and song name already exists")
+			First(equalSong).Error
+		if err == nil {
 			logging.Default.Warn(err.Error())
 			return
 		}
 
 		var releaseDate time.Time
 		if release == "" {
-			release = currentSong.ReleaseDate
-		}
-		releaseDate, err = time.Parse("02.01.2006", release)
-		if err != nil {
-			logging.Default.Warnf("Couldn`t transform date - %v - %v", release, err.Error())
-			return
+			currentSong.ReleaseDate = strings.Split(currentSong.ReleaseDate, "T")[0]
+			releaseDate, err = time.Parse("2006-01-02", currentSong.ReleaseDate)
+			if err != nil {
+				logging.Default.Warnf("Couldn`t transform date - %v - %v", currentSong.ReleaseDate, err.Error())
+				return
+			}
+		} else {
+			releaseDate, err = time.Parse("02.01.2006", release)
+			if err != nil {
+				logging.Default.Warnf("Couldn`t transform date - %v - %v", release, err.Error())
+				return
+			}
 		}
 
 		if link == "" {
@@ -216,20 +285,20 @@ func (db *pg) EditSong(id, groupId int, song, release, link string) (songInfo *S
 			ReleaseDate: releaseDate,
 			Link:        link,
 		}
-		err = db.Model(&model.Song{}).
+		err = tx.Model(&model.Song{}).
 			Where("id = ?", id).
-			Updates(&UpdatedSong).Error
+			Updates(UpdatedSong).Error
 		if err != nil {
 			logging.Default.Warn(err.Error())
 			return
 		}
 
 		songInfo = &SongInfo{
-			Id:          int(UpdatedSong.ID),
+			Id:          id,
 			GroupId:     int(UpdatedSong.GroupID),
-			Group:       newGroup.GroupName,
+			Group:       group,
 			Song:        UpdatedSong.SongName,
-			ReleaseDate: UpdatedSong.ReleaseDate.String(),
+			ReleaseDate: strings.Split(UpdatedSong.ReleaseDate.String(), " ")[0],
 			Link:        UpdatedSong.Link,
 		}
 
@@ -253,7 +322,7 @@ func (db *pg) DeleteSong(id int) (err error) {
 		err = fmt.Errorf("Deleted rows count is incorrect - %v (must be 0 or 1)", rowsDeleted)
 		logging.Default.Warnf(err.Error())
 	} else {
-		logging.Default.Warnf("No rows with id=%v were found and deleted", id)
+		logging.Default.Warnf("Song with id=%v was found and deleted", id)
 	}
 
 	return

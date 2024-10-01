@@ -20,7 +20,7 @@ func (db *pg) GetGroup(id string) (group *model.Group, err error) {
 
 func (db *pg) GetGroups(group string, page, pageSize uint) (groups []*model.Group, currentPage, pages int64, err error) {
 	err = db.Transaction(func(tx *gorm.DB) (err error) {
-		groupQuery := db.Model(&model.Group{})
+		groupQuery := tx.Model(&model.Group{})
 
 		if group != "" {
 			groupQuery = groupQuery.Where("group_name LIKE ?", "%"+group+"%")

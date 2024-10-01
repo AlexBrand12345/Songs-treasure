@@ -32,7 +32,7 @@ type SongWithVerses struct {
 
 func (db *pg) GetVerses(text string, page, pageSize uint) (songs []*Song, currentPage, pages int64, err error) {
 	err = db.Transaction(func(tx *gorm.DB) (err error) {
-		songsQuery := db.Model(&model.SongsVerse{}).
+		songsQuery := tx.Model(&model.SongsVerse{}).
 			Select("songs_verses.song_id, songs.song_name, songs_verses.verses").
 			Joins("JOIN songs ON songs.id = songs_verses.song_id")
 
@@ -123,7 +123,7 @@ func (db *pg) GetVersesBySongId(id string, page, pageSize uint) (songWithVerses 
 func (db *pg) EditVerses(id int, text string, versePosition uint) (changedSong *Song, err error) {
 	err = db.Transaction(func(tx *gorm.DB) (err error) {
 		var song *Song
-		songsQuery := db.Model(&model.SongsVerse{}).
+		songsQuery := tx.Model(&model.SongsVerse{}).
 			Select("songs_verses.song_id, songs.song_name, songs_verses.verses").
 			Joins("JOIN songs ON songs.id = songs_verses.song_id").
 			Where("songs_verses.song_id = ?", id)
@@ -158,11 +158,11 @@ func (db *pg) EditVerses(id int, text string, versePosition uint) (changedSong *
 		changedSong = &Song{
 			SongID: song.SongID,
 			Name:   song.Name,
-			Verses: strings.Join(songVerses, "\n\n"),
+			Verses: strings.Join(songVerses, `\n\n`),
 		}
-		err = db.Model(&model.SongsVerse{}).
+		err = tx.Model(&model.SongsVerse{}).
 			Where("song_id = ?", song.SongID).
-			Update("verses", strings.Join(songVerses, "\n\n")).Error
+			Update("verses", strings.Join(songVerses, `\n\n`)).Error
 		if err != nil {
 			logging.Default.Warn(err.Error())
 			return

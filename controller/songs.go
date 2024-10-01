@@ -150,5 +150,5 @@ func (ctrl *controller) DeleteSong(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Response(nil, err, w, http.StatusOK)
+	Response(nil, err, w, http.StatusNoContent)
 }

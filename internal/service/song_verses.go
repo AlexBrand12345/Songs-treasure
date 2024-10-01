@@ -34,12 +34,12 @@ func (srv *service) GetVerses(text string, page, pageSize uint) (resp GetVersesR
 	logging.Default.Debugf("Got verses from DB")
 
 	respVerses := make([]Verse, len(verses))
-	for _, verse := range verses {
-		respVerses = append(respVerses, Verse{
+	for i, verse := range verses {
+		respVerses[i] = Verse{
 			SongID: int(verse.SongID),
 			Name:   verse.Name,
 			Text:   verse.Verses,
-		})
+		}
 	}
 
 	resp = GetVersesResponse{
@@ -64,12 +64,12 @@ func (srv *service) GetVersesBySongId(id string, page, pageSize uint) (resp GetV
 	logging.Default.Debugf("Got verses from DB")
 
 	respVerses := make([]Verse, len(songWithVerses.Verses))
-	for _, verse := range songWithVerses.Verses {
-		respVerses = append(respVerses, Verse{
+	for i, verse := range songWithVerses.Verses {
+		respVerses[i] = Verse{
 			SongID: int(songWithVerses.SongID),
 			Name:   songWithVerses.Name,
 			Text:   verse,
-		})
+		}
 	}
 
 	resp = GetVersesByIdResponse{

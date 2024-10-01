@@ -8,7 +8,7 @@ const TableNameSongsVerse = "songs_verses"
 
 // SongsVerse mapped from table <songs_verses>
 type SongsVerse struct {
-	SongID int32  `gorm:"column:song_id;primaryKey" json:"song_id"`
+	SongID int32  `gorm:"column:song_id;not null" json:"song_id"`
 	Verses string `gorm:"column:verses;not null" json:"verses"`
 	Tsv    string `gorm:"column:tsv" json:"tsv"`
 }

@@ -21,11 +21,10 @@ func Response(data interface{}, err error, w http.ResponseWriter, status int) {
 		if status == 0 {
 			status = http.StatusBadRequest
 		}
-		w.WriteHeader(status)
 	} else {
 		logging.Default.Info(fmt.Sprintf("%+v", data))
-		w.WriteHeader(http.StatusOK)
 	}
+	w.WriteHeader(status)
 
 	json.NewEncoder(w).Encode(data)
 }

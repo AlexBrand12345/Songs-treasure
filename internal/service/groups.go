@@ -36,11 +36,11 @@ func (src *service) GetGroups(group string, page, pageSize uint) (resp GetGroups
 	logging.Default.Debugf("Got groups from DB")
 
 	respGroups := make([]GetGroupResponse, len(groups))
-	for _, group := range groups {
-		respGroups = append(respGroups, GetGroupResponse{
+	for i, group := range groups {
+		respGroups[i] = GetGroupResponse{
 			Id:    group.ID,
 			Group: group.GroupName,
-		})
+		}
 	}
 	resp = GetGroupsResponse{
 		Groups: respGroups,

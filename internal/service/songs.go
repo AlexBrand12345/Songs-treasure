@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"songs-treasure/pkg/endpoints"
 	"songs-treasure/pkg/logging"
 	"strconv"
 )
@@ -14,7 +16,7 @@ type SongInfo struct {
 	Link        string `json:"link"`
 }
 type AddSongResponse struct {
-	Id int `json:""`
+	SongInfo
 }
 type GetSongResponse struct {
 	SongInfo
@@ -33,6 +35,29 @@ type EditSongResponse struct {
 }
 
 func (srv *service) AddSong(group, song string) (resp AddSongResponse, err error) {
+	releaseDate, text, link, err := endpoints.GetMusicsInfo(group, song)
+	if err != nil {
+		err = fmt.Errorf("Couldn`t get new song description")
+		logging.Default.Error(err.Error())
+	}
+	songInfo, err := srv.db.AddSong(group, song, text, releaseDate, link)
+	if err != nil {
+		logging.Default.Errorf("Couldn`t add song, info: %v", err)
+		return
+	}
+	logging.Default.Debugf("Added song to DB")
+
+	resp = AddSongResponse{
+		SongInfo: SongInfo{
+			Id:          songInfo.Id,
+			GroupId:     songInfo.GroupId,
+			Group:       songInfo.Group,
+			Song:        songInfo.Song,
+			ReleaseDate: songInfo.ReleaseDate,
+			Link:        songInfo.Link,
+		},
+	}
+
 	return
 }
 
@@ -68,15 +93,15 @@ func (srv *service) GetSongs(group,
 	logging.Default.Debugf("Got songs from DB")
 
 	respSongs := make([]SongInfo, len(songs))
-	for _, song := range songs {
-		respSongs = append(respSongs, SongInfo{
+	for i, song := range songs {
+		respSongs[i] = SongInfo{
 			Id:          song.Id,
 			GroupId:     song.GroupId,
 			Group:       song.Group,
 			Song:        song.Song,
 			ReleaseDate: song.ReleaseDate,
 			Link:        song.Link,
-		})
+		}
 	}
 	resp = GetSongsResponse{
 		Songs: respSongs,
@@ -100,15 +125,15 @@ func (srv *service) GetSongsByGroupId(groupId,
 	logging.Default.Debugf("Got songs from DB")
 
 	respSongs := make([]SongInfo, len(songs))
-	for _, song := range songs {
-		respSongs = append(respSongs, SongInfo{
+	for i, song := range songs {
+		respSongs[i] = SongInfo{
 			Id:          song.Id,
 			GroupId:     song.GroupId,
 			Group:       song.Group,
 			Song:        song.Song,
 			ReleaseDate: song.ReleaseDate,
 			Link:        song.Link,
-		})
+		}
 	}
 
 	groupIdInt, _ := strconv.Atoi(groupId)
