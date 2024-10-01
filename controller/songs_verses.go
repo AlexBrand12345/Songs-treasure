@@ -16,12 +16,12 @@ type GetVersesByIdRequest struct {
 	PaginationRequest
 }
 type EditVersesRequest struct {
-	Id            int    `json:"id"`
+	Id            int    `json:"song_id"`
 	Text          string `json:"text"`
 	VersePosition uint   `json:"verse_position"`
 }
 type EditAllVersesRequest struct {
-	Id   int    `json:"id"`
+	Id   int    `json:"song_id"`
 	Text string `json:"text"`
 }
 

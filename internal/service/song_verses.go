@@ -16,7 +16,7 @@ type GetVersesResponse struct {
 	PaginationResponse
 }
 type GetVersesByIdResponse struct {
-	Id     int     `json:"id"`
+	Id     int     `json:"song_id"`
 	Name   string  `json:"name"`
 	Verses []Verse `json:"verses"`
 	PaginationResponse

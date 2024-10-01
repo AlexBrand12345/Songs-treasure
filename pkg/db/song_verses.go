@@ -134,9 +134,9 @@ func (db *pg) EditVerses(id int, text string, versePosition uint) (changedSong *
 			return
 		}
 
-		songVerses := strings.Split(strings.Trim(song.Verses, "\n\n"), "\n\n")
+		songVerses := strings.Split(strings.ReplaceAll(song.Verses, `\n\n`, "[BIGSPLIT]"), "[BIGSPLIT]")
 
-		changedText := strings.Split(strings.Trim(text, "\n\n"), "\n\n")
+		changedText := strings.Split(strings.ReplaceAll(text, "\n\n", "[BIGSPLIT]"), "[BIGSPLIT]")
 		if changedText[0] == "" {
 			err = fmt.Errorf("Song`s verse(s) can`t be deleted")
 			logging.Default.Error(err)
@@ -153,12 +153,13 @@ func (db *pg) EditVerses(id int, text string, versePosition uint) (changedSong *
 			))
 
 			songVerses[changedVerse-1] = changedText[0]
+			logging.Default.Warn(songVerses, changedText)
 		}
 
 		changedSong = &Song{
 			SongID: song.SongID,
 			Name:   song.Name,
-			Verses: strings.Join(songVerses, `\n\n`),
+			Verses: strings.Join(songVerses, "\n\n"),
 		}
 		err = tx.Model(&model.SongsVerse{}).
 			Where("song_id = ?", song.SongID).
