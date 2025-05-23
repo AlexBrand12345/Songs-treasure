@@ -18,7 +18,9 @@ func GetMusicsInfo(group, song string) (releaseDate, text, link string, err erro
 	var url string
 	var responseStruct MusicInfoResponse
 
-	// return "22.10.2020", "blabla\nstrange\n\ntest\n\nanotherone\nend", "", nil
+	if config.MUSIC_INFO_URL == "" {
+		return "22.10.2020", "blabla\nstrange\n\ntest\n\nanotherone\nend", "", nil
+	}
 
 	url = config.MUSIC_INFO_URL + "/info" + fmt.Sprintf("?group=%s&song=%s", group, song)
 
